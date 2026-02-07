@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Science Admin | 編輯模式</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background-color: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; }
+        .card { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 2rem; }
+        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .editing-glow { ring: 2px; ring-color: #4f46e5; border-color: #4f46e5; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen text-slate-800">
+    
+    <div class="max-w-6xl mx-auto space-y-6">
+        <header class="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-indigo-600 rounded-lg text-white"><i data-lucide="shield" class="w-6 h-6"></i></div>
+                <h1 class="text-2xl font-bold tracking-tight">科普小站後台</h1>
+            </div>
+            <div class="flex w-full md:w-auto gap-2">
+                <input type="password" id="admin-pass" placeholder="輸入密碼" class="flex-grow md:w-64 px-4 py-2 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all">
+                <button onclick="loadArticles()" id="refresh-btn" class="bg-slate-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-slate-900 transition flex items-center gap-2 whitespace-nowrap">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> 載入清單
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+                <div id="editor-card" class="card border-t-4 border-indigo-500 transition-all duration-300">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 id="form-title" class="text-xl font-bold flex items-center gap-2 text-slate-700">
+                            <i data-lucide="pen-tool" class="w-5 h-5 text-indigo-500"></i> 發佈新文章
+                        </h2>
+                        <button id="cancel-edit" onclick="cancelEdit()" class="hidden text-xs font-bold text-rose-500 hover:underline">取消編輯模式</button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">文章標題</label>
+                                <input type="text" id="post-title" class="w-full p-3 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">封面圖片 URL</label>
+                                <input type="text" id="post-image" class="w-full p-3 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none" placeholder="https://...">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">標籤 (Tags)</label>
+                            <input type="text" id="post-tags" class="w-full p-3 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none" placeholder="物理, 實驗, 心理學">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">簡短摘要</label>
+                            <input type="text" id="post-summary" class="w-full p-3 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">完整內容 (HTML)</label>
+                            <textarea id="post-content" rows="12" class="w-full p-4 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none font-mono text-sm bg-slate-50" placeholder="貼上你的 HTML 或純文字內容..."></textarea>
+                        </div>
+
+                        <button onclick="handlePublish()" id="pub-btn" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 transition flex justify-center items-center gap-2 shadow-lg">
+                            <i data-lucide="send" class="w-5 h-5"></i> <span>發佈文章</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="card h-[800px] flex flex-col p-0 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 bg-slate-50">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <i data-lucide="database" class="w-5 h-5 text-indigo-500"></i> 文章管理
+                        </h2>
+                    </div>
+                    <div id="list-container" class="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div class="text-center py-20 text-slate-400">
+                            <i data-lucide="lock" class="w-12 h-12 mx-auto mb-2 opacity-20"></i>
+                            <p>請輸入密碼並點擊載入</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbyCmkbP9rYgjTbOVDfFWDzYz1K9yQZeXgR6Q_k71WhHaVn2ppWQh9KPfXXDY3GD4aY/exec";
+        let allArticles = [];
+        let editingId = null;
+
+        lucide.createIcons();
+
+        async function api(action, payload = {}) {
+            const pass = document.getElementById('admin-pass').value;
+            if (!pass) return alert('⚠️ 請輸入管理密碼'), null;
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action, password: pass, ...payload })
+                });
+                return await res.json();
+            } catch (err) {
+                alert('連線失敗！請檢查 API 網址或權限。');
+                return null;
+            }
+        }
+
+        function handlePublish() {
+            if (editingId) updateArticle();
+            else publishNew();
+        }
+
+        async function publishNew() {
+            const btn = document.getElementById('pub-btn');
+            const data = getFormData();
+            if (!data.title || !data.content) return alert('標題與內容為必填！');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> 處理中...';
+            const res = await api('publish', { data });
+            if (res && res.status === 'success') {
+                alert('✅ 發佈成功！');
+                clearForm();
+                loadArticles();
+            } else if (res) alert('❌ 失敗：' + res.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="send" class="w-5 h-5"></i> <span>發佈文章</span>';
+            lucide.createIcons();
+        }
+
+        async function updateArticle() {
+            const btn = document.getElementById('pub-btn');
+            const data = getFormData();
+            data.id = editingId;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> 更新中...';
+            const res = await api('update', { data });
+            if (res && res.status === 'success') {
+                alert('✅ 文章已更新！');
+                cancelEdit();
+                loadArticles();
+            } else if (res) alert('❌ 失敗：' + res.message);
+            btn.disabled = false;
+        }
+
+        function editArticle(id) {
+            const art = allArticles.find(a => String(a.id) === String(id));
+            if (!art) return;
+
+            editingId = id;
+            document.getElementById('post-title').value = art.title;
+            document.getElementById('post-image').value = art.image;
+            document.getElementById('post-tags').value = art.tags;
+            document.getElementById('post-summary').value = art.summary;
+            document.getElementById('post-content').value = art.content;
+
+            document.getElementById('form-title').innerHTML = '<i data-lucide="edit-3" class="w-5 h-5 text-amber-500"></i> 正在編輯文章';
+            document.getElementById('pub-btn').innerHTML = '<i data-lucide="save" class="w-5 h-5"></i> <span>儲存修改</span>';
+            document.getElementById('pub-btn').className = "w-full bg-amber-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-amber-700 transition flex justify-center items-center gap-2 shadow-lg";
+            document.getElementById('cancel-edit').classList.remove('hidden');
+            document.getElementById('editor-card').classList.add('border-amber-500');
+            document.getElementById('editor-card').classList.remove('border-indigo-500');
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            lucide.createIcons();
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            clearForm();
+            document.getElementById('form-title').innerHTML = '<i data-lucide="pen-tool" class="w-5 h-5 text-indigo-500"></i> 發佈新文章';
+            document.getElementById('pub-btn').innerHTML = '<i data-lucide="send" class="w-5 h-5"></i> <span>發佈文章</span>';
+            document.getElementById('pub-btn').className = "w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 transition flex justify-center items-center gap-2 shadow-lg";
+            document.getElementById('cancel-edit').classList.add('hidden');
+            document.getElementById('editor-card').classList.remove('border-amber-500');
+            document.getElementById('editor-card').classList.add('border-indigo-500');
+            lucide.createIcons();
+        }
+
+        async function loadArticles() {
+            const container = document.getElementById('list-container');
+            const btn = document.getElementById('refresh-btn');
+            btn.disabled = true;
+            container.innerHTML = '<div class="text-center py-10"><span class="spinner text-indigo-600"></span></div>';
+
+            const res = await api('list');
+            if (res && res.status === 'success') {
+                allArticles = res.data;
+                renderList(res.data);
+            } else if (res) {
+                container.innerHTML = `<div class="text-center py-10 text-rose-500 font-bold">${res.message}</div>`;
+            }
+            btn.disabled = false;
+        }
+
+        function renderList(articles) {
+            const container = document.getElementById('list-container');
+            if (articles.length === 0) {
+                container.innerHTML = '<div class="text-center py-10 text-slate-400">目前沒有文章</div>';
+                return;
+            }
+            container.innerHTML = articles.map(art => `
+                <div class="bg-white border border-slate-200 p-4 rounded-xl hover:border-indigo-300 transition group relative">
+                    <div class="text-[10px] text-slate-400 font-bold mb-1">${art.date}</div>
+                    <div class="font-bold text-slate-800 line-clamp-1 mb-2 pr-16">${art.title}</div>
+                    <div class="flex gap-2">
+                        <button onclick="editArticle('${art.id}')" class="text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded text-xs font-bold transition">編輯</button>
+                        <button onclick="deleteArticle('${art.id}')" class="text-rose-600 hover:bg-rose-50 px-2 py-1 rounded text-xs font-bold transition">刪除</button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function deleteArticle(id) {
+            if (!confirm('確定要永久刪除這篇文章嗎？')) return;
+            const res = await api('delete', { id });
+            if (res && res.status === 'success') loadArticles();
+        }
+
+        function getFormData() {
+            return {
+                title: document.getElementById('post-title').value,
+                image: document.getElementById('post-image').value,
+                tags: document.getElementById('post-tags').value,
+                summary: document.getElementById('post-summary').value,
+                content: document.getElementById('post-content').value
+            };
+        }
+
+        function clearForm() {
+            ['post-title', 'post-image', 'post-tags', 'post-summary', 'post-content'].forEach(id => document.getElementById(id).value = '');
+        }
+    </script>
+</body>
+</html>
